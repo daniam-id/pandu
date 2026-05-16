@@ -1,0 +1,25 @@
+Starting E2E Tests for Pandu.ai Backend...
+
+=== Scenario 1: Dispatching 5 Normal Orders ===
+Order 1 response: SUCCESS
+Order 2 response: SUCCESS
+Order 3 response: SUCCESS
+Order 4 response: SUCCESS
+Order 5 response: SUCCESS
+Scenario 1 Complete.
+
+=== Scenario 2: Simulate Traffic Anomaly ===
+Traffic simulation response: SUCCESS (2 couriers affected)
+Scenario 2 Complete.
+
+=== Scenario 3: Batching Nearby Orders ===
+Batch Order 1 response: SUCCESS (Assigned: 9fzsaPBgG1YOP0HeRn3q)
+Batch Order 2 response: SUCCESS (Assigned: 9fzsaPBgG1YOP0HeRn3q)
+Batch Order 3 response: SUCCESS (Assigned: 9fzsaPBgG1YOP0HeRn3q)
+Scenario 3 Complete.
+
+=== Scenario 4: Obstacle Reporting via Vision ===
+Obstacle report response: SUCCESS (Severity: low, Action: ignored)
+Scenario 4 Complete.
+
+E2E Tests Finished.
