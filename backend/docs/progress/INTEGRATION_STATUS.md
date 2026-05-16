@@ -1,6 +1,6 @@
 # Integration Progress Report
 
-**Updated:** 2026-05-16  
+**Updated:** 2026-05-16 23:30 WIB  
 **Project:** Pandu.ai — Backend ↔ Frontend Integration  
 **Deployed URL:** https://pandu-backend-879040945141.asia-southeast2.run.app
 
@@ -92,20 +92,89 @@
 
 | # | Test | Expected | cURL Command |
 |---|------|----------|-------------|
-| 1 | Health endpoint | `200 OK`, `{"status":"healthy",...}` | `curl URL/health` |
+| 1 | Health endpoint | `200 OK`, `{"status":"ok",...}` | `curl URL/health` |
 | 2 | Invalid API key | `401` with Indonesian message | `curl -H "x-api-key: wrong" URL/api/v1/orders?courierId=test` |
 | 3 | Missing API key | `401` with Indonesian message | `curl URL/api/v1/orders?courierId=test` |
-| 4 | Order dispatch | `200` with `{orderId, assignedCourierId, estimatedDeliveryTime}` | `curl -H "x-api-key: KEY" -H "Content-Type: application/json" -d '{"pickupLocation":{"lat":-7.26,"lng":112.74},"dropoffLocation":{"lat":-7.30,"lng":112.73},"priority":"normal"}' URL/api/v1/orders/dispatch` |
+| 4 | Order dispatch | `201` with `{orderId, assignedCourierId, estimatedDeliveryTime}` | `curl -H "x-api-key: KEY" -H "Content-Type: application/json" -d '{"pickupLocation":{"lat":-7.26,"lng":112.74},"dropoffLocation":{"lat":-7.30,"lng":112.73},"priority":"normal"}' URL/api/v1/orders/dispatch` |
 | 5 | Rate limit | 101st request in 60s → `429` | Loop 101x `curl URL/api/v1/orders?courierId=x -H "x-api-key: KEY"` |
 | 6 | Route fetch | `200` with polyline array | `curl -H "x-api-key: KEY" URL/api/v1/routes/ord_xxx` |
 | 7 | CORS headers | `Access-Control-Allow-Origin` present | `curl -I -H "Origin: test" URL/api/v1/health` |
 
 ---
 
+## cURL Examples — All Endpoints
+
+```bash
+URL="https://pandu-backend-879040945141.asia-southeast2.run.app"
+KEY="<your_api_key>"
+
+# 1. Health (no auth)
+curl "$URL/health"
+
+# 2. Dispatch order
+curl -X POST -H "x-api-key: $KEY" -H "Content-Type: application/json" \
+  -d '{"pickupLocation":{"lat":-7.26,"lng":112.74},"dropoffLocation":{"lat":-7.30,"lng":112.73},"priority":"normal"}' \
+  "$URL/api/v1/orders/dispatch"
+
+# 3. Get order detail
+curl -H "x-api-key: $KEY" "$URL/api/v1/orders/<orderId>"
+
+# 4. List orders by courier
+curl -H "x-api-key: $KEY" "$URL/api/v1/orders?courierId=<courierId>"
+
+# 5. Update order status
+curl -X POST -H "x-api-key: $KEY" -H "Content-Type: application/json" \
+  -d '{"status":"picked_up","timestamp":"2026-05-16T16:00:00Z"}' \
+  "$URL/api/v1/orders/<orderId>/status"
+
+# 6. Cancel order
+curl -X POST -H "x-api-key: $KEY" -H "Content-Type: application/json" \
+  -d '{"reason":"Customer cancelled"}' \
+  "$URL/api/v1/orders/<orderId>/cancel"
+
+# 7. Driver location broadcast
+curl -X POST -H "x-api-key: $KEY" -H "Content-Type: application/json" \
+  -d '{"courierId":"<courierId>","lat":-7.26,"lng":112.74,"timestamp":"2026-05-16T16:00:00Z"}' \
+  "$URL/api/v1/driver/location"
+
+# 8. Get route polyline
+curl -H "x-api-key: $KEY" "$URL/api/v1/routes/<orderId>"
+
+# 9. Report obstacle (text-only)
+curl -X POST -H "x-api-key: $KEY" -H "Content-Type: application/json" \
+  -d '{"courierId":"<courierId>","type":"accident","severity":3,"description":"Kecelakaan di Jl. Raya","lat":-7.28,"lng":112.75}' \
+  "$URL/api/v1/obstacles/report"
+
+# 10. Traffic simulation
+curl -X POST -H "x-api-key: $KEY" -H "Content-Type: application/json" \
+  -d '{"targetAreaName":"Surabaya Pusat","congestionLevel":"heavy","affectedRadiusKm":2}' \
+  "$URL/api/v1/simulation/traffic"
+```
+
+---
+
 ## API Key
+
+> ⚠️ **Security:** The API key below is visible in this document. For production, retrieve it from Secret Manager or ask the backend team via secure channel.
 
 ```
 6c655706235a2f587c77512948ab45642ab18f9573e430542b767f12157e13cc
 ```
 
 Pass as `x-api-key` header on all `/api/v1/*` requests. Health endpoint requires no auth.
+
+---
+
+## Fix Log (2026-05-16)
+
+| Issue | Fix | Revision |
+|-------|-----|----------|
+| BE-001: Firestore failing | New SA in correct project (`pandu-494913`), updated secret | `00005-jv7` |
+| BE-002: API key rejected | Wired `pandu-api-key` secret, removed trailing newline | `00006-lqb` |
+| BE-004: Idempotent status | Same-state returns 200 no-op, final states return 409 | `00007-rnr` |
+| BE-005: Health returns 503 | Always 200 unless unhandled error; added `storage`, `uptime_seconds`, `version` | `00009-cb8` |
+| BE-007: Obstacle text-only | Confirmed working without photo | — |
+| BE-008: Missing cURL examples | Added full cURL section for all 10 endpoints | — |
+| BE-009: Error envelope audit | All 33 error responses use `{error: {code, message}}` — consistent | — |
+| BE-010: CORS tightening | Code supports `CORS_ORIGIN` env var; set to `https://pandu-ai-2026.web.app` before production | — |
+| BE-011: ai_decision_logs | Still actively written (5 call sites: orders, batch, reroute, listener, simulation) — kept for backend traceability | — |
