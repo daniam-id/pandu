@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 // filepath: src/services/maps.service.ts
 /**
  * Maps Service - Google Maps Routes API Integration
@@ -63,7 +64,7 @@ export class MapsService {
 
       return null;
     } catch (error) {
-      console.error('Error calculating route:', error);
+      logger.error(error);
       return null;
     }
   }
@@ -120,7 +121,7 @@ export class MapsService {
   } | null> {
     // For demo purposes, return simulated data
     // In production, integrate with real traffic API
-    console.log(`Getting traffic data for: ${areaName}`);
+    logger.info(`Getting traffic data for: ${areaName}`);
     return {
       congestionLevel: 'moderate',
       averageSpeed: 30, // km/h

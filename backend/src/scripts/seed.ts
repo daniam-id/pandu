@@ -14,6 +14,7 @@ async function seedCouriers() {
   for (let i = 1; i <= 5; i++) {
     mockCouriers.push({
       name: `Courier 00${i}`,
+      phone: `+62812000000${i}`,
       status: 'idle',
       currentLocation: {
         lat: baseLat + (Math.random() * 0.02 - 0.01),

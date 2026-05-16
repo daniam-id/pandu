@@ -3,7 +3,7 @@
 **Project:** Mini Hackathon Antigravity 2026 (GDG Surabaya)  
 **Scope:** Dispatcher Dashboard (Web Frontend)  
 **Date:** April 2026  
-**Status:** Documentation/Specification Phase — No application code exists yet.
+**Status:** Production-ready — 10 build cycles complete + driver app fully implemented. Dual-frontend architecture: Admin Dashboard (`src/`) + Driver Mobile App (`driver/`).
 
 ---
 
@@ -17,31 +17,25 @@
 | **Styling** | Tailwind CSS |
 | **Maps** | Google Maps Platform (Routes API) via `@react-google-maps/api` |
 | **Real-time DB** | Firebase Client SDK v9+ (`onSnapshot` listeners) |
-| **Language** | JavaScript / TypeScript |
+| **Language** | TypeScript (strict) |
 
 ### B. Major UI Components
 
 #### 1. Top Navigation Bar (`<Navbar />`)
-- **Left:** "Pandu.ai" logo/brand.
-- **Right:** System health indicators — AI engine status, Firestore connection state.
-- Sticky, full-width, minimal height.
+- **Left:** "Pandu.ai" logo/brand, Dashboard + Simulator nav links, mobile hamburger menu.
+- **Right:** Connection status badge, AI engine health indicator, traffic simulation trigger.
+- Sticky, full-width, height 56px.
 
-#### 2. Control & Overview Panel (`<ControlPanel />`) — Left Sidebar (~25% width)
-- **Order Input Form (`<OrderForm />`):** Fields for Pickup Lat/Lng, Dropoff Lat/Lng, and a "Dispatch" button. Submits `POST /api/v1/orders/dispatch` to the backend.
-- **Active Couriers List (`<CourierList />`):** Real-time cards showing courier name, status (idle/delivering), and assigned orders. Data sourced from Firestore `couriers` collection via `onSnapshot`.
+#### 2. Control & Overview Panel (`<ControlPanel />`) — Left Sidebar (320px)
+- **Order Input Form (`<OrderForm />`):** Fields for Pickup Lat/Lng, Dropoff Lat/Lng, and a "Dispatch" button. Submits `POST /orders/dispatch` to the backend.
+- **Active Couriers List (`<CourierList />`):** Real-time cards showing courier name, status (idle/delivering/rerouted), and assigned orders. Data sourced from Firestore `couriers` collection via `onSnapshot`.
 
-#### 3. Live Map View (`<MapView />`) — Center Panel (~50% width)
-- **Map Container:** Google Maps rendered via `@react-google-maps/api` or equivalent React wrapper.
+#### 3. Live Map View (`<MapView />`) — Main Panel (flex-1)
+- **Map Container:** Google Maps rendered via `@react-google-maps/api`.
 - **Courier Markers (`<CourierMarker />`):** Live GPS positions, updated in real-time from Firestore.
 - **Order Markers (`<OrderMarker />`):** Pickup (green) and dropoff (red) pins.
-- **Route Polylines (`<RoutePolyline />`):** Decoded polyline strings drawn on the map, representing the current optimal route for each courier.
-- **Courier Simulator Trigger:** A floating button at the bottom center opens the simulator modal.
-
-#### 4. AI Decision Log Panel (`<AILogPanel />`) — Right Sidebar (~25% width)
-- **Title:** "Agent Activity Feed".
-- **Feed Items (`<LogEntry />`):** Scrollable, timestamped list of AI reasoning and actions.
-- **Alerts:** High-severity events (e.g., obstacle-triggered reroutes) use `bg-red-100 border-red-500` styling to flash red.
-- Data sourced from Firestore `ai_decision_logs` collection via `onSnapshot`.
+- **Route Polylines (`<RoutePolyline />`):** Decoded polyline strings representing the current optimal route for each courier.
+- **Courier Simulator Trigger:** Floating action button opens obstacle report modal on desktop, navigates to `/simulator` on mobile.
 
 #### 5. Courier Simulator (`<CourierSimulator />`) — Floating Modal/Drawer
 - **Courier Select:** Dropdown to choose which courier is "reporting".
@@ -49,46 +43,69 @@
 - **Submit Button:** "Report to AI Dispatcher".
 - Purpose: hackathon demo tool — not a production courier app.
 
-### C. Planned File Structure
+### C. Actual File Structure
 
 ```
 frontend/
 ├── public/
 │   ├── index.html
-│   └── favicon.ico
+│   └── favicon.svg
 ├── src/
-│   ├── App.jsx               # Root component, layout orchestration
-│   ├── index.js               # React entry point
+│   ├── App.tsx                # Root with ErrorBoundary + QueryClientProvider + Toaster
+│   ├── main.tsx               # React entry point (createRoot)
+│   ├── routes.tsx             # React Router: /, /simulator, *
 │   ├── components/
-│   │   ├── Navbar.jsx
-│   │   ├── ControlPanel.jsx
-│   │   ├── OrderForm.jsx
-│   │   ├── CourierList.jsx
-│   │   ├── CourierCard.jsx
-│   │   ├── MapView.jsx
-│   │   ├── CourierMarker.jsx
-│   │   ├── OrderMarker.jsx
-│   │   ├── RoutePolyline.jsx
-│   │   ├── AILogPanel.jsx
-│   │   ├── LogEntry.jsx
-│   │   └── CourierSimulator.jsx
+│   │   ├── AppShell.tsx       # Navbar + <Outlet/> wrapper
+│   │   ├── Navbar.tsx         # Top nav: logo, links, status badges, traffic sim
+│   │   ├── ControlPanel.tsx   # Left sidebar: OrderForm + CourierList
+│   │   ├── OrderForm.tsx      # Zod-validated dispatch form (react-hook-form)
+│   │   ├── CourierList.tsx    # Real-time courier cards
+│   │   ├── CourierListEmpty.tsx  # Empty state: no couriers online
+│   │   ├── CourierListSkeleton.tsx # Loading skeleton for courier list
+│   │   ├── CourierCard.tsx    # Individual courier: avatar, name, status badge
+│   │   ├── MapView.tsx        # Google Maps: markers + polylines + InfoWindows
+│   │   ├── CourierMarker.tsx  # SVG status-colored courier pin
+│   │   ├── OrderMarker.tsx    # Pickup (green) / dropoff (red) pins
+│   │   ├── RoutePolyline.tsx  # Decoded polyline rendering
+│   │   ├── MarkerInfoCard.tsx # InfoWindow content for courier markers
+│   │   ├── CourierSimulatorButton.tsx  # Floating FAB → dialog (desktop) / link (mobile)
+│   │   ├── CourierSimulator.tsx        # Obstacle report dialog with photo upload
+│   │   ├── CourierSelect.tsx  # Couriers dropdown for simulator
+│   │   ├── ObstaclePhotoUpload.tsx     # Drag-and-drop photo input
+│   │   ├── TrafficSimButton.tsx        # Navbar traffic injection trigger
+│   │   ├── ConnectionStatus.tsx        # Online/offline indicator
+│   │   ├── AIEngineStatus.tsx          # Backend health polling badge
+│   │   ├── MobileDrawer.tsx   # Sheet drawer for mobile sidebars
+│   │   ├── MobileNav.tsx      # Hamburger menu
+│   │   ├── MapSkeleton.tsx    # Map loading placeholder
+│   │   ├── MapError.tsx       # Map fail fallback with retry
+│   │   ├── ErrorBoundary.tsx  # React class ErrorBoundary
+│   │   ├── LatLngInput.tsx    # Reusable lat/lng field pair
+│   │   └── ui/                # shadcn primitives (Button, Card, Input, Dialog, Sheet, etc.)
 │   ├── hooks/
-│   │   ├── useFirestoreCollection.js   # Generic onSnapshot hook
-│   │   ├── useCouriers.js              # Couriers-specific listener
-│   │   ├── useOrders.js                # Orders-specific listener
-│   │   └── useAILogs.js                # AI decision logs listener
+│   │   ├── useFirestoreCollection.ts   # Generic onSnapshot hook
+│   │   ├── useCouriers.ts              # Couriers listener
+│   │   └── useOrders.ts                # Orders listener
 │   ├── services/
-│   │   ├── firebase.js                 # Firebase Client SDK init
-│   │   └── api.js                      # REST API client (axios/fetch)
+│   │   ├── firebase.ts        # Firebase SDK init
+│   │   ├── api.ts             # REST API client (Axios)
+│   │   └── queryClient.ts     # React Query config
+│   ├── types/
+│   │   └── domain.ts          # Courier, Order, Obstacle, LatLng, etc.
 │   ├── utils/
-│   │   └── polyline.js                 # Polyline decoding utility
+│   │   ├── polyline.ts        # Polyline decoder
+│   │   ├── mapStyle.ts        # Custom Google Maps style
+│   │   ├── formatTime.ts      # Relative timestamps
+│   │   └── formatDistance.ts  # Meters → km formatting
 │   └── styles/
-│       └── index.css                   # Tailwind directives + custom overrides
-├── .env                                # Environment variables (gitignored)
-├── .env.example                        # Template with placeholder keys
-├── tailwind.config.js
-├── package.json
-└── README.md
+│       └── index.css           # Tailwind directives + CSS vars
+├── driver/                     # Standalone Driver Mobile App (Vite, port 3001)
+├── .env.example
+├── tailwind.config.ts
+├── vite.config.ts
+├── firebase.json
+├── .firebaserc
+└── package.json
 ```
 
 ---
@@ -101,22 +118,22 @@ frontend/
 ┌──────────────────────────────────────────────────────────────┐
 │                       FRONTEND (React)                        │
 │                                                               │
-│  ┌──────────────┐   ┌──────────────┐   ┌──────────────────┐ │
-│  │ ControlPanel │   │   MapView    │   │   AILogPanel     │ │
-│  │ (OrderForm,  │   │ (Markers,    │   │ (LogEntry feed)  │ │
-│  │  CourierList) │   │  Polylines)  │   │                  │ │
-│  └──────┬───────┘   └──────┬───────┘   └────────┬─────────┘ │
-│         │                  │                     │            │
-│         ▼                  ▼                     ▼            │
+│  ┌──────────────┐                        ┌──────────────┐   │
+│  │ ControlPanel │                        │   MapView    │   │
+│  │ (OrderForm,  │                        │ (Markers,    │   │
+│  │  CourierList) │                       │  Polylines)  │   │
+│  └──────┬───────┘                        └──────┬───────┘   │
+│         │                                       │            │
+│         ▼                                       ▼            │
 │  ┌─────────────────────────────────────────────────────────┐ │
-│  │              React State (useState / Context)           │ │
+│  │              React State (useState)                      │ │
 │  └───────────────────────────┬─────────────────────────────┘ │
 │                              │                                │
 │              ┌───────────────┴───────────────┐               │
 │              ▼                               ▼               │
 │  ┌───────────────────┐          ┌──────────────────────┐    │
 │  │ Firestore Hooks   │          │ REST API Client      │    │
-│  │ (onSnapshot)      │          │ (axios/fetch)        │    │
+│  │ (onSnapshot)      │          │ (axios)              │    │
 │  └────────┬──────────┘          └──────────┬───────────┘    │
 └───────────┼────────────────────────────────┼────────────────┘
             │                                │
@@ -124,16 +141,16 @@ frontend/
    ┌─────────────────┐            ┌──────────────────────┐
    │ Firebase         │            │ Backend (Cloud Run)  │
    │ Firestore        │            │ POST /orders/dispatch│
-   │ (4 collections)  │            │ POST /obstacles/report│
+   │ (3 collections)  │            │ POST /obstacles/report│
    │                  │            │ POST /simulation/traffic│
    └─────────────────┘            └──────────────────────┘
 ```
 
 ### Communication Methods
 
-1. **Real-time reads (Firestore → Frontend):** `onSnapshot` listeners on `couriers`, `orders`, `obstacles`, and `ai_decision_logs` collections push live data into React state. No polling.
-2. **Write operations (Frontend → Backend):** REST API calls via `fetch`/`axios` to the Cloud Run backend. The frontend never writes directly to Firestore.
-3. **Intra-component:** React props drilling or Context API for shared state (courier list, order list, AI logs). No Redux or external state library planned.
+1. **Real-time reads (Firestore → Frontend):** `onSnapshot` listeners on `couriers`, `orders`, and `obstacles` collections push live data into React state. No polling.
+2. **Write operations (Frontend → Backend):** REST API calls via `axios` to the Cloud Run backend. The frontend never writes directly to Firestore.
+3. **Intra-component:** React props for shared state (courier list, order list). No Redux or external state library.
 
 ### APIs Consumed
 
@@ -196,34 +213,33 @@ The frontend follows the design tokens defined in `DESIGN.md`:
 
 ### Application Initialization
 
-1. React entry point (`index.js`) renders `<App />`.
+1. React entry point (`main.tsx`) renders `<App />`.
 2. Firebase Client SDK initializes with config from environment variables.
-3. Custom hooks (`useCouriers`, `useOrders`, `useAILogs`) establish `onSnapshot` listeners.
+3. Custom hooks (`useCouriers`, `useOrders`) establish `onSnapshot` listeners.
 4. Google Maps loads asynchronously via the Maps JavaScript API.
-5. Initial data from Firestore populates the map, sidebar, and log panel.
+5. Initial data from Firestore populates the map and sidebar.
 
 ### User Interaction Flows
 
 #### Flow A: Dispatch a New Order
 1. Dispatcher fills in pickup/dropoff coordinates in `<OrderForm />`.
-2. Form submits `POST /api/v1/orders/dispatch` to the backend.
+2. Form submits `POST /orders/dispatch` to the backend.
 3. Backend processes → writes to Firestore.
 4. `onSnapshot` on `orders` collection fires → React state updates → map renders new order markers.
-5. `onSnapshot` on `ai_decision_logs` fires → AI log panel shows the assignment decision.
-6. `onSnapshot` on `couriers` fires → courier card updates with new assignment + route polyline redraws.
+5. `onSnapshot` on `couriers` fires → courier card updates with new assignment + route polyline redraws.
 
 #### Flow B: Report an Obstacle (Courier Simulator)
-1. User opens `<CourierSimulator />` modal.
-2. Selects a courier + uploads obstacle photo.
-3. Form submits `POST /api/v1/obstacles/report` with image as `multipart/form-data`.
+1. User opens `<CourierSimulator />` modal (desktop) or navigates to `/simulator` (mobile).
+2. Selects a courier + obstacle type, severity, and photo upload.
+3. Form submits `POST /obstacles/report` with image as `multipart/form-data`.
 4. Backend → Gemini Vision → reroute decision → Firestore writes.
-5. `onSnapshot` listeners update the map (new polyline), AI log (reroute reason), and courier card (updated status).
+5. `onSnapshot` listeners update the map (new polyline) and courier card (updated status).
 
 #### Flow C: Simulate Traffic
-1. User clicks "Simulate Traffic/Obstacle" button.
-2. Triggers `POST /api/v1/simulation/traffic` with a predefined traffic anomaly payload.
+1. User clicks "Simulate Traffic" button in the Navbar.
+2. Triggers `POST /simulation/traffic` with a predefined traffic anomaly payload.
 3. Backend injects anomaly → AI reroutes affected couriers → Firestore writes.
-4. Real-time updates propagate to map and log panel.
+4. Real-time updates propagate to map and courier list.
 
 ### Error Handling (Frontend)
 

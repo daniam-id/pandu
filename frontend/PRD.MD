@@ -21,9 +21,10 @@ Build a responsive, real-time web dashboard that visualizes courier movements, o
 *   Form to input new delivery orders into the system.
 *   "Simulate Traffic/Obstacle" button for testing dynamic responses.
 
-### C. AI Decision Log (Notification Panel)
+### C. AI Decision Log (Notification Panel) [DESCOPED — Cycle 10]
 *   Real-time feed showing AI reasoning and actions (e.g., "Rerouting: Heavy traffic detected on Jalan HR Muhammad")[cite: 1].
 *   Alerts triggered by backend AI updates.
+*   **Removed from dashboard in Cycle 10.** Layout adjusted to 2-panel (ControlPanel + MapView).
 
 ### D. Courier Interface Simulator (Modal/Floating UI)
 *   A simplified interface simulating the courier's view for the hackathon demonstration[cite: 1].
@@ -32,7 +33,7 @@ Build a responsive, real-time web dashboard that visualizes courier movements, o
 ## 4. Data Flow & State Management
 *   **Listen:** Use `onSnapshot` from Firestore to continuously listen for changes in the active routes and courier locations[cite: 1].
 *   **Update:** When Firestore data changes, update the React state to immediately trigger a map re-render[cite: 1].
-*   **Send:** Form submissions and obstacle photos are sent to backend API endpoints (Google Cloud Run) or written directly to specific Firestore collections[cite: 1].
+*   **Send:** Form submissions and obstacle photos are sent to backend API endpoints (Google Cloud Run). No direct Firestore writes from the frontend.
 
 ## 5. Out of Scope (For FE)
 *   No complex routing logic or multi-order batching calculations on the client side (rely strictly on backend coordinates)[cite: 1].

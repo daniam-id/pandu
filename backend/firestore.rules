@@ -1,0 +1,49 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================================
+    // HACKATHON RULES — Frontends read-only, Backend Admin SDK writes
+    //
+    // Strategy:
+    //   - Dispatcher & Driver apps use Firestore Client SDK for
+    //     real-time reads (onSnapshot) only.
+    //   - All data mutations go through REST API endpoints with
+    //     x-api-key authentication.
+    //   - REST API uses Firebase Admin SDK which bypasses these rules.
+    //
+    // This eliminates the risk of frontends corrupting each other's
+    // data and enforces role boundaries via the REST layer.
+    // ============================================================
+
+    // Collection: couriers
+    match /couriers/{courierId} {
+      allow read: if true;
+      allow write: if false; // Backend Admin SDK only
+    }
+
+    // Collection: orders
+    match /orders/{orderId} {
+      allow read: if true;
+      allow write: if false; // Backend Admin SDK only
+    }
+
+    // Collection: obstacles
+    match /obstacles/{obstacleId} {
+      allow read: if true;
+      allow write: if false; // Backend Admin SDK only
+    }
+
+    // Collection: ai_decision_logs
+    match /ai_decision_logs/{logId} {
+      allow read: if true;
+      allow write: if false; // Backend Admin SDK only
+    }
+
+    // Catch-all for any future collections
+    match /{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}

@@ -1,0 +1,15 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Obstacle photos: readable by frontends, writable only via Admin SDK
+    match /obstacles/{imageId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // Catch-all: deny everything else
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

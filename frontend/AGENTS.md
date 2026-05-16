@@ -9,7 +9,7 @@
 - **Product:** Pandu.ai — Real-time AI Dispatcher Dashboard
 - **Stack:** React.js, Tailwind CSS, Google Maps API, Firebase Client SDK
 - **Scope:** Web frontend only. All AI logic and routing lives in the backend.
-- **Status:** Pre-code (specification phase). No application code exists yet.
+- **Status:** Production-ready — 10 build cycles complete + driver app fully implemented. Dual-frontend architecture: Admin Dashboard (`src/`) + Driver Mobile App (`driver/`). `npm run build` ✅, `npm run typecheck` ✅, Firebase Hosting config ready.
 
 ## Essential Files
 
@@ -58,17 +58,17 @@ npx prettier --write src/
 
 ## Code Conventions
 
-- **Components:** Functional components with hooks. No class components.
-- **Naming:** PascalCase for components (`MapView.jsx`), camelCase for hooks (`useCouriers.js`), camelCase for utilities.
+- **Components:** Functional components with hooks (preferred). `ErrorBoundary.tsx` uses a class component — React requires it for error boundary lifecycle methods.
+- **Naming:** PascalCase for components (`MapView.tsx`), camelCase for hooks (`useCouriers.ts`), camelCase for utilities.
 - **Hooks:** Custom hooks in `src/hooks/`. Firestore listeners must clean up in `useEffect` return.
-- **Services:** Firebase init in `src/services/firebase.js`. API client in `src/services/api.js`.
+- **Services:** Firebase init in `src/services/firebase.ts`. API client in `src/services/api.ts`.
 - **Styling:** Tailwind utility classes. Custom CSS only in `src/styles/index.css` with `@layer` directives.
 - **File structure:** Follow the layout defined in `technical_overview.md` Section 1C.
 
 ## Scope Boundaries
 
 ### In Scope
-- UI layout (three-panel + navbar + floating modal)
+- UI layout (two-panel + navbar + floating modal)
 - Real-time data rendering from Firestore
 - REST API calls to backend endpoints
 - Google Maps integration (markers, polylines)
@@ -94,3 +94,82 @@ npx prettier --write src/
 - ✅ **MUST update PROGRESS.md before commits**
 - ✅ **Maintain consistency with patterns** defined in this file and `technical_overview.md`
 - ✅ **Document significant changes** in `PROGRESS.md` with timestamps and descriptions
+
+---
+# NAVIGATION & CONTEXT RULES
+
+## Mandatory Map Check
+Setiap awal sesi baru, WAJIB baca `SYSTEM_MAP.md` di root sebagai kompas utama
+arsitektur, tech stack, dan lokasi fungsi kunci. DILARANG melakukan blind scan.
+
+## Fallback Map
+Jika `SYSTEM_MAP.md` belum ada atau diduga usang terhadap kondisi kode saat ini,
+buat/perbarui dulu secara ringkas sebelum analisis dimulai.
+
+## Trace-by-Function / Trace-by-Flow
+Gunakan SYSTEM_MAP.md untuk menentukan titik mulai, lalu telusuri alur berurutan:
+Trigger/Entry Point → Handler/Controller → Business Logic/Service → Data Access/Repository → Database/Storage
+
+## Universal Layer Mapping
+Jika istilah Controller/Service/Repo tidak dipakai, map ke padanan terdekat
+(Handler, Usecase, Domain, Adapter, DAO, dll) tanpa memaksa nama layer.
+
+## Efisiensi
+Jangan gunakan `rg` untuk explorasi. Gunakan SYSTEM_MAP.md + Header Doc
+untuk langsung ke target file dan fungsi.
+
+## Universal Exclusions
+Selalu abaikan folder berikut tanpa pengecualian:
+node_modules, .venv, venv, env, vendor, target, .gradle, bin, obj, pkg,
+.git, .vscode, .idea, __pycache__, dist, build, tmp, coverage, .next, .nuxt, .cache
+
+## Super Efisien
+- Minim command, minim file read.
+- File >500 baris: baca per blok fungsi/class terkait, BUKAN full file kecuali diminta user.
+
+## Pre-Edit Trace Note
+Sebelum edit file apapun, tulis singkat (1–2 kalimat):
+file target + alur fungsi yang akan disentuh.
+
+## Persetujuan Inisiatif
+Jika ada perubahan di luar request user, wajib minta izin sebelum eksekusi.
+
+## Modularitas
+Pecah logika ke modul/file kecil sesuai tanggung jawab (Single Responsibility).
+Jangan tumpuk banyak logic dalam satu file.
+
+---
+# DOKUMENTASI (WAJIB)
+
+## Header Doc
+Setiap file yang dibuat/diubah WAJIB punya header doc di paling atas file
+(sesuai gaya komentar bahasa: //, #, ', /* */).
+
+Isi minimal Header Doc:
+- Tujuan    : tujuan file/module
+- Caller    : pemanggil/pengguna utama
+- Dependensi: service/repo/API utama
+- Main Func : fungsi/class public/utama
+- Side Effects: DB read/write, HTTP call, file I/O
+
+## Synchronized Documentation
+Setiap perubahan logic WAJIB diikuti update Header Doc agar tetap akurat.
+
+## Synchronized Map Update
+Jika menambah/menghapus file atau mengubah flow fungsi utama yang tercatat,
+WAJIB update SYSTEM_MAP.md pada bagian terkait di sesi yang sama.
+
+## Larangan
+Dilarang menambah/mengubah logic tanpa menyesuaikan Header Doc.
+
+---
+# STANDAR DATABASE & QUERY (WAJIB)
+
+- Rancang query dengan prinsip minimum I/O, minimum cost, minimum lock contention.
+- Selalu evaluasi: cardinality/selectivity, pemakaian index, join order & strategy,
+  dampak CPU/memory/disk/network.
+- Hindari: proses berulang, temp table tidak perlu, write berlapis, N+1 query.
+- Pilih strategi sesuai konteks: upsert, merge, batch, incremental, query rewrite.
+- Sebelum finalize perubahan DB-heavy, jelaskan singkat alasan efisiensi,
+  trade-off, dan risiko performa yang dihindari.
+---

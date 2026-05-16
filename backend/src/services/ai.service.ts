@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 // filepath: src/services/ai.service.ts
 /**
  * AI Service - Gemini Orchestration
@@ -102,9 +103,8 @@ export class AIService {
 
   constructor() {
     this.client = getGeminiClient();
-    // Use Gemini 1.5 Flash for function calling
     this.model = this.client.getGenerativeModel({
-      model: 'gemini-3.1-flash-lite-preview',
+      model: config.gemini.modelVersion,
       systemInstruction: SYSTEM_PROMPT,
       tools: [{ functionDeclarations: TOOLS }],
     });
@@ -112,20 +112,22 @@ export class AIService {
 
   /**
    * Analyze an obstacle image using Gemini Vision
+   * Accepts image buffer (from multer) and converts to base64 for Gemini
    */
-  async analyzeObstacle(imageUrl: string): Promise<ObstacleAnalysisResult> {
+  async analyzeObstacle(imageBuffer: Buffer, mimeType: string): Promise<ObstacleAnalysisResult> {
     try {
-      // For image analysis, we use a simpler model without function calling
       const visionModel = this.client.getGenerativeModel({
-        model: 'gemini-3.1-flash-lite-preview',
+        model: config.gemini.modelVersion,
       });
+
+      const base64Image = imageBuffer.toString('base64');
 
       const prompt = [
         { text: VISION_PROMPT },
         {
           inlineData: {
-            mimeType: 'image/jpeg',
-            data: imageUrl, // In production, this would be base64 or a URL
+            mimeType,
+            data: base64Image,
           },
         },
       ];
@@ -144,10 +146,10 @@ export class AIService {
         requiresReroute: parsed.requiresReroute ?? false,
       };
     } catch (error) {
-      console.error('Error analyzing obstacle:', error);
+      logger.error(error);
       return {
         obstacleDetected: false,
-        description: 'Failed to analyze image',
+        description: 'Gagal menganalisis gambar',
         severity: 'low',
         requiresReroute: false,
       };
@@ -203,7 +205,7 @@ export class AIService {
         text: response.text(),
       };
     } catch (error) {
-      console.error('Error processing message:', error);
+      logger.error(error);
       return { text: 'Error processing request' };
     }
   }
@@ -217,7 +219,7 @@ export class AIService {
     message: string;
   }> {
     // This would integrate with Maps service
-    console.log('Executing reroute:', params);
+    logger.info(params, 'Executing reroute:');
     return {
       success: true,
       newRoute: 'encoded_polyline_here',
@@ -233,7 +235,7 @@ export class AIService {
     message: string;
   }> {
     // This would integrate with Firestore service
-    console.log('Executing batch orders:', params);
+    logger.info(params, 'Executing batch orders:');
     return {
       success: true,
       message: `Batched order ${params.newOrderId} to courier ${params.courierId}`,

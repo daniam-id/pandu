@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 // filepath: src/routes/orders.ts
 /**
  * Route Handler: Orders
@@ -15,11 +16,54 @@ import {
   DispatchOrderResponse,
   UpdateOrderStatusRequest,
   UpdateOrderStatusResponse,
+  CancelOrderRequest,
+  CancelOrderResponse,
   SuccessResponse,
   ErrorResponse,
 } from '../types/index.js';
 
 const router = Router();
+
+/**
+ * GET /api/v1/orders
+ * Fetch assigned orders for a courier
+ * Query params: ?courierId=X
+ * Per INTEGRATION_SPEC §2.1 endpoint #4
+ */
+router.get('/', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { courierId } = req.query;
+
+    if (!courierId || typeof courierId !== 'string') {
+      const errorRes: ErrorResponse = {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Parameter courierId diperlukan',
+          details: [{ field: 'courierId', message: 'Required query parameter' }],
+        },
+      };
+      res.status(400).json(errorRes);
+      return;
+    }
+
+    const orders = await firestoreService.getOrdersByCourier(courierId);
+
+    const successRes: SuccessResponse = {
+      success: true,
+      data: orders,
+    };
+    res.json(successRes);
+  } catch (error) {
+    logger.error(error);
+    const errorRes: ErrorResponse = {
+      error: {
+        code: 'RETRIEVAL_FAILED',
+        message: 'Gagal mengambil data pesanan',
+      },
+    };
+    res.status(500).json(errorRes);
+  }
+});
 
 /**
  * POST /api/v1/orders/dispatch
@@ -34,10 +78,10 @@ router.post('/dispatch', async (req: Request, res: Response): Promise<void> => {
       const errorRes: ErrorResponse = {
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Missing required fields: pickupLocation, dropoffLocation',
+          message: 'Kolom wajib tidak ada: pickupLocation, dropoffLocation',
           details: [
-            { field: 'pickupLocation', message: 'Required' },
-            { field: 'dropoffLocation', message: 'Required' },
+            { field: 'pickupLocation', message: 'Wajib diisi' },
+            { field: 'dropoffLocation', message: 'Wajib diisi' },
           ],
         },
       };
@@ -45,19 +89,26 @@ router.post('/dispatch', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    // Map priority: string input → number 1-5 per INTEGRATION_SPEC §3.1
+    const priorityMap: Record<string, number> = { normal: 3, high: 4, urgent: 5 };
+    const priority = typeof payload.priority === 'string'
+      ? (priorityMap[payload.priority] ?? 3)
+      : (typeof payload.priority === 'number' ? payload.priority : 3);
+
     // Create order in Firestore
     const order = {
       pickupLocation: payload.pickupLocation,
       dropoffLocation: payload.dropoffLocation,
       status: 'pending' as const,
       assignedCourierId: null,
-      priority: payload.priority || 'normal',
+      priority,
+      items: (payload as any).items || null,
       createdAt: new Date(),
       completedAt: null,
     };
 
     const orderId = await firestoreService.createOrder(order);
-    console.log(`[Orders] Created order: ${orderId}`);
+    logger.info(`[Orders] Created order: ${orderId}`);
 
     // AI decision: Find nearby couriers for batching
     const nearby = await findNearbyCouriers(payload.pickupLocation, 1.0);
@@ -126,11 +177,11 @@ router.post('/dispatch', async (req: Request, res: Response): Promise<void> => {
       },
     } as SuccessResponse<DispatchOrderResponse>);
   } catch (error) {
-    console.error('[Orders] Error:', error);
+    logger.error(error);
     const errorRes: ErrorResponse = {
       error: {
         code: 'DISPATCH_FAILED',
-        message: 'Failed to dispatch order',
+        message: 'Gagal mengirim pesanan',
       },
     };
     res.status(500).json(errorRes);
@@ -150,7 +201,7 @@ router.get('/:orderId', async (req: Request, res: Response): Promise<void> => {
       const errorRes: ErrorResponse = {
         error: {
           code: 'ORDER_NOT_FOUND',
-          message: 'Order not found',
+          message: 'Pesanan tidak ditemukan',
         },
       };
       res.status(404).json(errorRes);
@@ -163,11 +214,100 @@ router.get('/:orderId', async (req: Request, res: Response): Promise<void> => {
     };
     res.json(successRes);
   } catch (error) {
-    console.error('[Orders] Error:', error);
+    logger.error(error);
     const errorRes: ErrorResponse = {
       error: {
         code: 'RETRIEVAL_FAILED',
-        message: 'Failed to retrieve order',
+        message: 'Gagal mengambil pesanan',
+      },
+    };
+    res.status(500).json(errorRes);
+  }
+});
+
+/**
+ * POST /api/v1/orders/:orderId/cancel
+ * Cancel an order (dispatcher or driver initiated)
+ * Sets status=failed, removes from courier's assignedOrders
+ */
+router.post('/:orderId/cancel', async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { orderId } = req.params;
+    const payload = req.body as CancelOrderRequest;
+
+    if (!payload.reason) {
+      const errorRes: ErrorResponse = {
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Alasan pembatalan diperlukan',
+          details: [{ field: 'reason', message: 'Wajib diisi' }],
+        },
+      };
+      res.status(400).json(errorRes);
+      return;
+    }
+
+    const order = await firestoreService.getOrder(orderId);
+    if (!order) {
+      const errorRes: ErrorResponse = {
+        error: {
+          code: 'ORDER_NOT_FOUND',
+          message: 'Pesanan tidak ditemukan',
+        },
+      };
+      res.status(404).json(errorRes);
+      return;
+    }
+
+    // Can only cancel pending or assigned orders
+    if (order.status !== 'pending' && order.status !== 'assigned') {
+      const errorRes: ErrorResponse = {
+        error: {
+          code: 'INVALID_STATUS_TRANSITION',
+          message: `Pesanan dengan status ${order.status} tidak dapat dibatalkan`,
+        },
+      };
+      res.status(400).json(errorRes);
+      return;
+    }
+
+    const updateData: Record<string, unknown> = {
+      status: 'failed' as const,
+      driverStatus: 'failed',
+      failureReason: payload.reason,
+      completedAt: new Date().toISOString(),
+    };
+
+    await firestoreService.updateOrderStatusWithData(orderId, updateData);
+
+    if (order.assignedCourierId) {
+      await firestoreService.removeOrderFromCourier(order.assignedCourierId, orderId);
+    }
+
+    // Log cancellation
+    await firestoreService.createAIDecisionLog({
+      type: 'route_optimized',
+      message: `Pesanan ${orderId} dibatalkan: ${payload.reason}`,
+      relatedCourierId: order.assignedCourierId,
+      relatedOrderId: orderId,
+      timestamp: new Date(),
+    });
+
+    const successRes: SuccessResponse<CancelOrderResponse> = {
+      success: true,
+      data: {
+        orderId,
+        newStatus: 'failed',
+        cancelledAt: new Date().toISOString(),
+      },
+    };
+    res.json(successRes);
+  } catch (error) {
+    logger.error(error);
+    const errorRes: ErrorResponse = {
+      error: {
+        code: 'CANCEL_FAILED',
+        message: 'Gagal membatalkan pesanan',
       },
     };
     res.status(500).json(errorRes);
@@ -189,10 +329,10 @@ router.post('/:orderId/status', async (req: Request, res: Response): Promise<voi
       const errorRes: ErrorResponse = {
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Missing required fields: status, timestamp',
+          message: 'Kolom wajib tidak ada: status, timestamp',
           details: [
-            { field: 'status', message: 'Required' },
-            { field: 'timestamp', message: 'Required' },
+            { field: 'status', message: 'Wajib diisi' },
+            { field: 'timestamp', message: 'Wajib diisi' },
           ],
         },
       };
@@ -205,8 +345,8 @@ router.post('/:orderId/status', async (req: Request, res: Response): Promise<voi
       const errorRes: ErrorResponse = {
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'failureReason is required when status === "failed"',
-          details: [{ field: 'failureReason', message: 'Required for failed status' }],
+          message: 'failureReason diperlukan saat status === "failed"',
+          details: [{ field: 'failureReason', message: 'Wajib diisi untuk status gagal' }],
         },
       };
       res.status(400).json(errorRes);
@@ -219,10 +359,40 @@ router.post('/:orderId/status', async (req: Request, res: Response): Promise<voi
       const errorRes: ErrorResponse = {
         error: {
           code: 'ORDER_NOT_FOUND',
-          message: 'Order not found',
+          message: 'Pesanan tidak ditemukan',
         },
       };
       res.status(404).json(errorRes);
+      return;
+    }
+
+    // Idempotency: same-state transition is always a no-op (BE-004)
+    const currentDriverStatus = order.driverStatus || 'assigned';
+
+    if (payload.status === currentDriverStatus) {
+      const successRes: SuccessResponse<UpdateOrderStatusResponse> = {
+        success: true,
+        data: {
+          orderId,
+          newStatus: payload.status,
+          updatedAt: order.updatedAt as string || new Date().toISOString(),
+          noChange: true,
+        },
+      };
+      res.json(successRes);
+      return;
+    }
+
+    // Final states cannot be transitioned out of (BE-004)
+    const finalStates = ['delivered', 'failed'];
+    if (finalStates.includes(currentDriverStatus)) {
+      const errorRes: ErrorResponse = {
+        error: {
+          code: 'ALREADY_FINAL',
+          message: `Pesanan sudah berstatus ${currentDriverStatus} dan tidak dapat diubah lagi`,
+        },
+      };
+      res.status(409).json(errorRes);
       return;
     }
 
@@ -233,42 +403,42 @@ router.post('/:orderId/status', async (req: Request, res: Response): Promise<voi
       in_transit: ['delivered', 'failed'],
     };
 
-    // Map canonical status to driver status for validation
-    const currentCanonicalStatus = order.status;
-    const allowedNextStatuses = validTransitions[currentCanonicalStatus] || [];
+    const allowedNextStatuses = validTransitions[currentDriverStatus] || [];
 
     if (!allowedNextStatuses.includes(payload.status)) {
       const errorRes: ErrorResponse = {
         error: {
-          code: 'INVALID_STATUS_TRANSITION',
-          message: `Cannot transition from ${currentCanonicalStatus} to ${payload.status}`,
+          code: 'INVALID_TRANSITION',
+          message: `Tidak dapat beralih dari ${currentDriverStatus} ke ${payload.status}`,
           details: [
             {
               field: 'status',
-              message: `Valid transitions from ${currentCanonicalStatus}: ${allowedNextStatuses.join(', ')}`,
+              message: `Transisi yang valid dari ${currentDriverStatus}: ${allowedNextStatuses.join(', ')}`,
             },
           ],
         },
       };
-      res.status(400).json(errorRes);
+      res.status(409).json(errorRes);
       return;
     }
 
-    // Update order with new canonical status
-    let canonicalStatus: 'pending' | 'assigned' | 'completed' | 'failed' = currentCanonicalStatus as any;
+    // Determine canonical status from driver status
+    const terminalDriverStatuses = ['delivered', 'failed'];
+    let canonicalStatus: 'assigned' | 'completed' | 'failed' = 'assigned';
     if (payload.status === 'delivered') {
       canonicalStatus = 'completed';
     } else if (payload.status === 'failed') {
       canonicalStatus = 'failed';
     }
 
-    // Perform update
-    const updateData: any = {
-      status: canonicalStatus,
+    // Build update data
+    const updateData: Record<string, unknown> = {
+      driverStatus: payload.status,
       updatedAt: new Date().toISOString(),
     };
 
-    if (canonicalStatus === 'completed' || canonicalStatus === 'failed') {
+    if (terminalDriverStatuses.includes(payload.status)) {
+      updateData.status = canonicalStatus;
       updateData.completedAt = new Date().toISOString();
     }
 
@@ -279,25 +449,28 @@ router.post('/:orderId/status', async (req: Request, res: Response): Promise<voi
     await firestoreService.updateOrderStatusWithData(orderId, updateData);
 
     // If completed/failed, clear from courier's assignedOrders
-    if ((canonicalStatus === 'completed' || canonicalStatus === 'failed') && order.assignedCourierId) {
+    if (terminalDriverStatuses.includes(payload.status) && order.assignedCourierId) {
       await firestoreService.removeOrderFromCourier(order.assignedCourierId, orderId);
     }
+
+    const updatedAtStr = new Date().toISOString();
 
     const successRes: SuccessResponse<UpdateOrderStatusResponse> = {
       success: true,
       data: {
         orderId,
         newStatus: payload.status,
-        updatedAt: new Date().toISOString(),
+        updatedAt: updatedAtStr,
       },
     };
+
     res.json(successRes);
   } catch (error) {
-    console.error('[Orders] Error updating status:', error);
+    logger.error(error);
     const errorRes: ErrorResponse = {
       error: {
         code: 'STATUS_UPDATE_FAILED',
-        message: 'Failed to update order status',
+        message: 'Gagal memperbarui status pesanan',
       },
     };
     res.status(500).json(errorRes);

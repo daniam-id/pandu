@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 // filepath: src/routes/simulation.ts
 /**
  * Route Handler: Simulation
@@ -30,11 +31,11 @@ router.post('/traffic', async (req: Request, res: Response): Promise<void> => {
       const errorRes: ErrorResponse = {
         error: {
           code: 'VALIDATION_ERROR',
-          message: 'Missing required fields: targetAreaName, congestionLevel, affectedRadiusKm',
+          message: 'Kolom wajib tidak ada: targetAreaName, congestionLevel, affectedRadiusKm',
           details: [
-            { field: 'targetAreaName', message: 'Required' },
-            { field: 'congestionLevel', message: 'Required' },
-            { field: 'affectedRadiusKm', message: 'Required' },
+            { field: 'targetAreaName', message: 'Wajib diisi' },
+            { field: 'congestionLevel', message: 'Wajib diisi' },
+            { field: 'affectedRadiusKm', message: 'Wajib diisi' },
           ],
         },
       };
@@ -42,7 +43,7 @@ router.post('/traffic', async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    console.log(`[Simulation] Traffic anomaly: ${payload.targetAreaName} (${payload.congestionLevel})`);
+    logger.info(`[Simulation] Traffic anomaly: ${payload.targetAreaName} (${payload.congestionLevel})`);
 
     // Find all couriers
     const allCouriers = await firestoreService.getAllCouriers();
@@ -62,7 +63,7 @@ router.post('/traffic', async (req: Request, res: Response): Promise<void> => {
           reason: `Traffic anomaly: ${payload.congestionLevel} congestion on ${payload.targetAreaName}`,
         });
 
-        console.log(`[Simulation] Rerouted courier ${courier.id}:`, rerouteResult);
+        logger.info(`[Simulation] Rerouted courier ${courier.id}:`, rerouteResult);
       }
     }
 
@@ -82,11 +83,11 @@ router.post('/traffic', async (req: Request, res: Response): Promise<void> => {
       },
     } as SuccessResponse<TrafficSimulationResponse>);
   } catch (error) {
-    console.error('[Simulation] Error:', error);
+    logger.error(error);
     const errorRes: ErrorResponse = {
       error: {
         code: 'SIMULATION_FAILED',
-        message: 'Failed to simulate traffic',
+        message: 'Gagal mensimulasikan lalu lintas',
       },
     };
     res.status(500).json(errorRes);

@@ -1,0 +1,43 @@
+repos:
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    hooks:
+      - id: prettier
+        types_or: [ts, tsx, css, json, yaml, md]
+        exclude: >-
+          (?x)
+          node_modules/|
+          build/|
+          dist/|
+          .agent/
+        args: [--write]
+
+  - repo: local
+    hooks:
+      - id: typecheck-root
+        name: TypeScript typecheck (root)
+        entry: npm run typecheck
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: typecheck-driver
+        name: TypeScript typecheck (driver)
+        entry: npm --prefix driver run typecheck
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: test-root
+        name: Vitest (root)
+        entry: npm test
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: test-driver
+        name: Vitest (driver)
+        entry: npm --prefix driver test
+        language: system
+        pass_filenames: false
+        always_run: true

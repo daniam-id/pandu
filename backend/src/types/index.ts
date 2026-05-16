@@ -14,23 +14,29 @@ export interface GeoLocation {
 // ============ Order Types ============
 
 export type OrderStatus = 'pending' | 'assigned' | 'completed' | 'failed';
-export type OrderPriority = 'normal' | 'high' | 'urgent';
+export type OrderPriority = number; // 1-5, 1=lowest per INTEGRATION_SPEC §3.1
+export type DriverOrderStatus = 'assigned' | 'picked_up' | 'in_transit' | 'delivered' | 'failed';
 
 export interface Order {
   id?: string;
   pickupLocation: GeoLocation;
   dropoffLocation: GeoLocation;
   status: OrderStatus;
+  driverStatus?: DriverOrderStatus;
   assignedCourierId: string | null;
   createdAt: Date;
   completedAt: Date | null;
   priority: OrderPriority;
+  items?: string;
+  failureReason?: string;
+  updatedAt?: string;
 }
 
 export interface CreateOrderRequest {
   pickupLocation: GeoLocation;
   dropoffLocation: GeoLocation;
-  priority?: OrderPriority;
+  priority?: string | number; // Accepts "normal"/"high"/"urgent" or 1-5
+  items?: string;
 }
 
 export interface DispatchOrderResponse {
@@ -46,7 +52,7 @@ export type CourierStatus = 'idle' | 'delivering' | 'rerouted' | 'offline';
 export interface Courier {
   id?: string;
   name: string;
-  phone?: string;
+  phone: string;
   status: CourierStatus;
   currentLocation: GeoLocation;
   assignedOrders: string[];
@@ -102,6 +108,7 @@ export interface AIDecisionLog {
   id?: string;
   type: AIDecisionType;
   message: string;
+  severity?: number; // 1-5, 3+ triggers alert styling
   relatedCourierId: string | null;
   relatedOrderId: string | null;
   timestamp: Date;
@@ -123,18 +130,27 @@ export interface TrafficSimulationResponse {
 
 // ============ Status Transition Types ============
 
-export type DriverOrderStatus = 'assigned' | 'picked_up' | 'in_transit' | 'delivered' | 'failed';
-
 export interface UpdateOrderStatusRequest {
   status: DriverOrderStatus;
   timestamp: string; // ISO 8601
   failureReason?: string; // Required if status === 'failed'
 }
 
+export interface CancelOrderRequest {
+  reason: string;
+}
+
+export interface CancelOrderResponse {
+  orderId: string;
+  newStatus: 'failed';
+  cancelledAt: string; // ISO 8601
+}
+
 export interface UpdateOrderStatusResponse {
   orderId: string;
   newStatus: DriverOrderStatus;
   updatedAt: string; // ISO 8601
+  noChange?: boolean;
 }
 
 // ============ Location Broadcast Types ============
@@ -175,12 +191,15 @@ export interface RouteResponse {
 // ============ Health Check Types ============
 
 export interface HealthResponse {
-  status: 'healthy' | 'degraded' | 'unhealthy';
+  status: 'ok' | 'degraded' | 'down';
   services: {
-    firestore: 'ok' | 'failing';
-    gemini: 'ok' | 'failing';
-    maps: 'ok' | 'failing';
+    firestore: 'ok' | 'failing' | 'degraded';
+    gemini: 'ok' | 'failing' | 'degraded';
+    maps: 'ok' | 'failing' | 'degraded';
+    storage: 'ok' | 'failing' | 'degraded';
   };
+  uptime_seconds?: number;
+  version?: string;
 }
 
 // ============ Error Response Types ============

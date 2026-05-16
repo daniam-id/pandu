@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 // filepath: src/listeners/orderListener.ts
 /**
  * Order Listener
@@ -16,16 +17,16 @@ import { Order } from '../types/index.js';
  * This should be called on server startup
  */
 export function setupOrderListener(): () => void {
-  console.log('[orderListener] Setting up real-time listener for pending orders...');
+  logger.info('[orderListener] Setting up real-time listener for pending orders...');
 
   const unsubscribe = firestoreService.onPendingOrdersChange(async (orders: Order[]) => {
-    console.log(`[orderListener] ${orders.length} pending order(s) detected`);
+    logger.info(`[orderListener] ${orders.length} pending order(s) detected`);
 
     for (const order of orders) {
       try {
         await processPendingOrder(order);
       } catch (error) {
-        console.error(`[orderListener] Error processing order ${order.id}:`, error);
+        logger.error(`[orderListener] Error processing order ${order.id}:`, error);
       }
     }
   });
@@ -38,13 +39,19 @@ export function setupOrderListener(): () => void {
  * AI decides whether to batch or dispatch a new courier
  */
 async function processPendingOrder(order: Order): Promise<void> {
-  console.log(`[orderListener] Processing pending order: ${order.id}`);
+  logger.info(`[orderListener] Processing pending order: ${order.id}`);
+
+  // Guard: skip if already assigned (race condition with POST /orders/dispatch)
+  if (order.assignedCourierId) {
+    logger.info(`[orderListener] Order ${order.id} already assigned, skipping`);
+    return;
+  }
 
   // Step 1: Check for nearby couriers (batching opportunity)
   const nearby = await findNearbyCouriers(order.pickupLocation, 1.0);
 
   if (nearby.length > 0) {
-    console.log(
+    logger.info(
       `[orderListener] Found ${nearby.length} nearby courier(s) for batching`
     );
 
@@ -60,12 +67,12 @@ async function processPendingOrder(order: Order): Promise<void> {
     const aiMessage = `New order ${order.id} is within 1km of courier ${targetCourier.courierId}. Should we batch this order?`;
     const aiResponse = await aiService.processMessage(aiMessage, batchContext);
 
-    console.log(`[orderListener] AI response:`, aiResponse);
+    logger.info(`[orderListener] AI response:`, aiResponse);
 
     if (aiResponse.functionCalls && aiResponse.functionCalls.length > 0) {
       // Handle function calls from AI
       for (const functionCall of aiResponse.functionCalls) {
-        console.log(`[orderListener] AI called function: ${functionCall.name}`);
+        logger.info(`[orderListener] AI called function: ${functionCall.name}`);
       }
     }
 
@@ -76,13 +83,13 @@ async function processPendingOrder(order: Order): Promise<void> {
   const idleCouriers = await firestoreService.getIdleCouriers();
 
   if (idleCouriers.length === 0) {
-    console.log(`[orderListener] No available couriers for order ${order.id}`);
+    logger.info(`[orderListener] No available couriers for order ${order.id}`);
     return;
   }
 
   // Select the closest idle courier
   const selectedCourier = idleCouriers[0];
-  console.log(`[orderListener] Assigning order ${order.id} to courier ${selectedCourier.id}`);
+  logger.info(`[orderListener] Assigning order ${order.id} to courier ${selectedCourier.id}`);
 
   // Calculate route
   const route = await mapsService.calculateRoute(
@@ -104,6 +111,6 @@ async function processPendingOrder(order: Order): Promise<void> {
       timestamp: new Date(),
     });
 
-    console.log(`[orderListener] Order ${order.id} assigned to ${selectedCourier.name}`);
+    logger.info(`[orderListener] Order ${order.id} assigned to ${selectedCourier.name}`);
   }
 }

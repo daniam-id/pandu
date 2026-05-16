@@ -39,8 +39,19 @@ yarn-error.log*
 *.swp
 *.swo
 
+# AI tooling
+.commandcode/
+.specify/
+.windsurf/
+
 # TypeScript
 *.tsbuildinfo
 
 # Firebase Service Accounts & Credentials
-pandu-2465d-firebase-adminsdk-fbsvc-264df7ce84.json
+*-firebase-adminsdk-*.json
+firebase-key.json
+
+# Logs
+*.log
+test_output.txt
+type_errors.log

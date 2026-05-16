@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Brand tokens — mirror DESIGN.md */
+    --brand-primary: #085427;
+    --brand-primary-hover: #06401e;
+    --brand-accent: #8ce363;
+    --brand-accent-hover: #71c64b;
+
+    /* Surfaces & text */
+    --surface: #f7faf3;
+    --surface-offset: #e5e7eb;
+    --border: #e5e7eb;
+    --text-primary: #111827;
+    --text-muted: #6b7280;
+    --text-faint: #9ca3af;
+    --text-inverse: #ffffff;
+
+    /* Status */
+    --color-success: #8ce363;
+    --color-warning: #f59e0b;
+    --color-error: #ef4444;
+
+    /* Map element tokens — paired with panduMapStyle (Cycle 4) */
+    --map-land: #f8f9fa;
+    --map-road-arterial: #ffffff;
+    --map-road-stroke: #d4d7dc;
+    --map-road-local: #f5f6f8;
+    --map-road-highway: #ffe08a;
+    --map-road-highway-stroke: #e0a92e;
+    --map-water: #a8d8ea;
+    --map-park: #c7e9b0;
+    --map-building: #eceef1;
+    --map-label-text: #1f2937;
+    --map-label-stroke: #ffffff;
+
+    /* Radii — DESIGN.md */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 20px;
+    --radius-xl: 32px;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--text-primary);
+    background: var(--surface);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Consistent focus ring for keyboard users — WCAG 2.4.7 */
+  :focus-visible {
+    outline: 2px solid var(--brand-accent);
+    outline-offset: 2px;
+  }
+}

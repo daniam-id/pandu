@@ -1,13 +1,13 @@
 # Design System
 
 ## Overview
-A mobile application for tracking cycling activities and planning group trips. The target audience is active individuals who enjoy sports. The interface is clean, modern, and fresh, with green as the primary focus.
+A real-time logistics dispatcher dashboard and driver mobile app for tracking courier movements, order statuses, and AI-driven routing. The interface is clean, modern, and fresh, with green as the primary focus.
 
 ## Colors
 
 ### Light Mode
 - **Background**: `#FFFFFF` — page background
-- **Surface**: `#F9F9F9` — cards, panels, modals
+- **Surface**: `#f7faf3` — cards, panels, modals
 - **Surface Offset**: `#E5E7EB` — nested surfaces, table rows, subtle separators
 - **Border**: `#E5E7EB` — default border color
 - **Primary**: `#085427` — CTAs, active states, key interactive elements

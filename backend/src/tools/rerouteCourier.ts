@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 // filepath: src/tools/rerouteCourier.ts
 /**
  * Tool: rerouteCourier
@@ -22,7 +23,7 @@ export interface RerouteCourierResult {
  */
 export async function rerouteCourier(params: RerouteCourierParams): Promise<RerouteCourierResult> {
   try {
-    console.log(`[rerouteCourier] Rerouting courier ${params.courierId} to avoid ${params.avoidLocation}`);
+    logger.info(`[rerouteCourier] Rerouting courier ${params.courierId} to avoid ${params.avoidLocation}`);
 
     // Get courier's current info
     const courier = await firestoreService.getCourier(params.courierId);
@@ -103,7 +104,7 @@ export async function rerouteCourier(params: RerouteCourierParams): Promise<Rero
       message: `Successfully rerouted courier ${params.courierId}`,
     };
   } catch (error) {
-    console.error('[rerouteCourier] Error:', error);
+    logger.error(error);
     return {
       success: false,
       courierId: params.courierId,

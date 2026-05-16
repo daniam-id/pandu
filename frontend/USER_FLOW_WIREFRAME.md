@@ -60,10 +60,8 @@ sequenceDiagram
 *   **Markers:** Courier locations (moving in real-time), Order Pickup/Dropoff pins.
 *   **Polylines:** Visible routes connecting couriers to their destinations.
 
-**4. Right Panel: AI Decision Log (Width: ~25%)**
-*   **Title:** "Agent Activity Feed".
-*   **Feed Items:** A scrollable list of logs (e.g., *[14:05] Agent batched Order #12 to Courier B*, *[14:12] Agent rerouted Courier A due to flood*).
-*   **Alerts:** High-severity events flash red (Tailwind: `bg-red-100 border-red-500`).
+**4. (Removed in Cycle 10: AI Decision Log Panel — right sidebar)**
+*   Dashboard layout simplified to 2-panel: ControlPanel (left) + MapView (center/full).
 
 ---
 
@@ -80,11 +78,11 @@ sequenceDiagram
 
 To build this quickly, use these foundational Tailwind classes for the main layout:
 ```jsx
-// Main Layout Wrapper
-<div className="flex h-screen w-full bg-gray-50 overflow-hidden">
+// Main Layout Wrapper (2-panel)
+<div className="flex h-screen w-full bg-surface overflow-hidden">
   
   // Left Panel
-  <aside className="w-1/4 h-full bg-white shadow-md p-4 flex flex-col gap-4 overflow-y-auto">
+  <aside className="w-[320px] h-full bg-white border-r border-border p-4 flex flex-col gap-4 overflow-y-auto">
     
   </aside>
 
@@ -93,15 +91,9 @@ To build this quickly, use these foundational Tailwind classes for the main layo
     <GoogleMapComponent className="absolute inset-0 w-full h-full"/>
     
     // Courier Simulator Floating Button (Bottom Center)
-    <button className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg">
+    <button className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-brand-primary text-white px-6 py-3 rounded-full shadow-lg">
       Simulate Courier App
     </button>
   </main>
-
-  // Right Panel (AI Logs)
-  <aside className="w-1/4 h-full bg-gray-900 text-white p-4 overflow-y-auto">
-    <h2 className="text-xl font-bold mb-4">Agentic Engine Logs</h2>
-    
-  </aside>
 
 </div>

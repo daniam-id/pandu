@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger.js';
 // filepath: src/tools/batchOrders.ts
 /**
  * Tool: batchOrders
@@ -22,7 +23,7 @@ export interface BatchOrdersResult {
  */
 export async function batchOrders(params: BatchOrdersParams): Promise<BatchOrdersResult> {
   try {
-    console.log(`[batchOrders] Batching order ${params.newOrderId} to courier ${params.courierId}`);
+    logger.info(`[batchOrders] Batching order ${params.newOrderId} to courier ${params.courierId}`);
 
     // Get courier info
     const courier = await firestoreService.getCourier(params.courierId);
@@ -75,7 +76,7 @@ export async function batchOrders(params: BatchOrdersParams): Promise<BatchOrder
       message: `Successfully batched order ${params.newOrderId} to courier ${params.courierId}`,
     };
   } catch (error) {
-    console.error('[batchOrders] Error:', error);
+    logger.error(error);
     return {
       success: false,
       courierId: params.courierId,

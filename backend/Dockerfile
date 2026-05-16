@@ -1,18 +1,25 @@
-FROM node:20-alpine
-
+# Stage 1: Build
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy package files first for better caching
 COPY package*.json ./
+RUN npm ci
+COPY tsconfig.json ./
+COPY src/ ./src/
+RUN npm run build
 
-RUN npm ci --only=production
+# Stage 2: Production
+FROM node:20-alpine AS runner
+WORKDIR /app
 
-# Copy built files (if building locally)
-COPY dist ./dist
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+COPY --from=builder /app/dist ./dist
 
-# Copy source for tsx development
-COPY package.json ./
+RUN addgroup -g 1001 -S app && adduser -S app -u 1001 -G app
+USER app
 
 EXPOSE 8080
+ENV NODE_ENV=production
 
 CMD ["node", "dist/index.js"]

@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Firebase
+.firebase/
+*.firebase.json.cache
+
+# Logs
+*.log
+server.log
+server_start.log
+server_test.log
+test_output.txt
+type_errors.log
+
+# Firebase Admin SDK keys (SECRETS)
+*-firebase-adminsdk-*.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Agent/tool configs (personal)
+.commandcode/
+.agent/
+.windsurf/
+.specify/
+
+# Test coverage
+coverage/

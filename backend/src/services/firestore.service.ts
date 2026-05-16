@@ -62,6 +62,9 @@ export class FirestoreService {
     if (courierId) {
       updateData.assignedCourierId = courierId;
     }
+    if (status === 'assigned') {
+      updateData.driverStatus = 'assigned';
+    }
     if (status === 'completed') {
       updateData.completedAt = new Date().toISOString();
     }
@@ -70,6 +73,16 @@ export class FirestoreService {
 
   async updateOrderStatusWithData(orderId: string, updateData: any): Promise<void> {
     await this.db.collection('orders').doc(orderId).update(updateData);
+  }
+
+  async getOrdersByCourier(courierId: string): Promise<Order[]> {
+    const snapshot = await this.db
+      .collection('orders')
+      .where('assignedCourierId', '==', courierId)
+      .get();
+    const orders = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Order));
+    // Filter to active orders (not completed/failed) for driver
+    return orders.filter((o) => o.status === 'assigned' || o.status === 'pending');
   }
 
   // ============ Couriers ============
@@ -98,7 +111,14 @@ export class FirestoreService {
       .collection('couriers')
       .where('status', '==', 'idle')
       .get();
-    return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Courier));
+    const couriers = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Courier));
+    // Filter out stale couriers — no location update for >45 seconds
+    // (3x LOCATION_BROADCAST_INTERVAL_MS default 15000ms)
+    const now = Date.now();
+    return couriers.filter((c) => {
+      const updatedAt = c.updatedAt instanceof Date ? c.updatedAt.getTime() : Date.now();
+      return (now - updatedAt) < 45000;
+    });
   }
 
   async updateCourierLocation(

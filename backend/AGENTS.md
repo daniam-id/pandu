@@ -3,7 +3,7 @@
 ## Project Context
 Pandu.ai is an agentic logistics routing engine. The backend is a Node.js/TypeScript serverless API deployed on Google Cloud Run. It orchestrates Gemini 3.1 Flash-Lite for autonomous courier dispatching, route optimization, and multimodal obstacle analysis.
 
-**Key docs:** [technical_overview.md](./technical_overview.md) · [PRD.MD](./PRD.MD) · [API_CONTRACT.md](./API_CONTRACT.md) · [FIRESTORE_SCHEMA.md](./FIRESTORE_SCHEMA.md) · [AI_PROMPTS_AND_SPECS.md](./AI_PROMPTS_AND_SPECS.md)
+**Key docs:** [technical_overview.md](../architecture/technical_overview.md) · [PRD.MD](../architecture/PRD.MD) · [API_CONTRACT.md](../api/API_CONTRACT.md) · [FIRESTORE_SCHEMA.md](../architecture/FIRESTORE_SCHEMA.md) · [AI_PROMPTS_AND_SPECS.md](../guides/AI_PROMPTS_AND_SPECS.md)
 
 ## Tech Stack
 - **Runtime:** Node.js + TypeScript (strict mode)
@@ -78,7 +78,7 @@ backend/
 - Write descriptive commit messages referencing the feature/fix.
 
 ## Testing
-- Demo scenarios defined in [TEST_CASES_SCENARIOS.md](./TEST_CASES_SCENARIOS.md).
+- Demo scenarios defined in [TEST_CASES_SCENARIOS.md](../api/TEST_CASES_SCENARIOS.md).
 - 4 core scenarios: Initialization, Traffic Response, Multi-Order Batching, Multimodal Vision.
 - All endpoints must be testable via `curl` or Postman.
 
